@@ -49,9 +49,11 @@ This will start:
 
 2. Check for availability and activate:
 
-   if (window.**MAP_GAME**?.available) {
-   window.**MAP_GAME**.instance.activate(olMap); // Pass OpenLayers map instance
-   }
+```javascript
+if (window.**MAP_GAME**?.available) {
+  window.**MAP_GAME**.instance.activate(olMap); // Pass OpenLayers map instance
+}
+```
 
 ## Building
 
