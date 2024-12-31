@@ -27,7 +27,7 @@ An injectable OpenLayers-based game module that can be added to any web applicat
 1. Start the development environment:
 
 ```
-   ./dev/serve.sh
+./dev/serve.sh
 ```
 
 This will start:
@@ -60,8 +60,8 @@ if (window.**MAP_GAME**?.available) {
 From the easter directory:
 
 ```
-    cd easter
-    npm run build
+cd easter
+npm run build
 ```
 
 The built file will be available at `easter/dist/easter.js`
