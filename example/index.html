@@ -60,7 +60,7 @@
       const nlExtent = [-15000, 285000, 300000, 640000];
 
       // Initialize OpenLayers map
-      const map = new ol.Map({
+      window.map = new ol.Map({
         target: "map",
         pixelRatio: 1,
         layers: [
@@ -109,8 +109,8 @@
         .getElementById("activate-button")
         .addEventListener("click", function () {
           if (window.__MAP_GAME__?.available) {
-            window.__MAP_GAME__.instance.activate("map");
-            this.style.display = "none"; // Hide button after activation
+            window.__MAP_GAME__.instance.activate(map);
+            this.style.display = "none";
           }
         });
     </script>
