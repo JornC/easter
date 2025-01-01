@@ -95,24 +95,43 @@
         }),
       });
 
-      // Initial fit and zoom
-      map.getView().fit(nlExtent, {
-        padding: [50, 50, 50, 50],
-        constrainResolution: true,
-        callback: () => {
-          map.getView().setZoom(9); // Set zoom after fit is complete
-        },
-      });
+      // Store initial view state
+      const initialFit = (shouldAnimate = true) => {
+        map.getView().fit(nlExtent, {
+          padding: [50, 50, 50, 50],
+          constrainResolution: true,
+          duration: shouldAnimate ? 1000 : undefined,
+          callback: () => {
+            map.getView().setZoom(9);
+          },
+        });
+      };
+
+      // Initial fit without animation
+      initialFit(false);
 
       // Handle activation via button
-      document
-        .getElementById("activate-button")
-        .addEventListener("click", function () {
-          if (window.__MAP_GAME__?.available) {
-            window.__MAP_GAME__.instance.activate(map);
-            this.style.display = "none";
-          }
-        });
+      const activateButton = document.getElementById("activate-button");
+
+      const handleExit = () => {
+        // Make button visible again
+        activateButton.style.display = "block";
+
+        // Properly cleanup the game
+        if (window.__MAP_GAME__?.instance) {
+          window.__MAP_GAME__.instance.deactivate();
+        }
+
+        // Reset view to initial extent with animation
+        initialFit(true);
+      };
+
+      activateButton.addEventListener("click", function () {
+        if (window.__MAP_GAME__?.available) {
+          window.__MAP_GAME__.instance.activate(map, handleExit);
+          this.style.display = "none";
+        }
+      });
     </script>
   </body>
 </html>

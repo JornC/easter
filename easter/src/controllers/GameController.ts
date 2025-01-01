@@ -1,60 +1,45 @@
 import type { GameInstance } from "../types";
-import { Map, Feature } from "ol";
-import { Circle } from "ol/geom";
-import VectorLayer from "ol/layer/Vector";
-import VectorSource from "ol/source/Vector";
-import { Style, Fill, Stroke } from "ol/style";
+import { Map } from "ol";
+import { GridConfig, HexGrid, defaultColors } from "../game/grid/HexGrid";
+import { GameState } from "../game/state/GameState";
+import { GameInteraction } from "../game/interaction/GameInteraction";
+import { GameUI } from "../game/ui/GameUI";
 
 export class GameController implements GameInstance {
   private map: Map | null = null;
-  private gameLayer: VectorLayer<VectorSource> | null = null;
+  private grid: HexGrid | null = null;
+  private state: GameState | null = null;
+  private interaction: GameInteraction | null = null;
+  private ui: GameUI | null = null;
 
-  // Harskamp military training ground coordinates (approximate)
-  private readonly TRAINING_GROUND = [186000, 460000];
-
-  activate(map: Map): void {
+  activate(map: Map, onExit: Function): void {
     this.map = map;
+    this.state = new GameState(8, 0.2);
 
-    // Create game layer
-    this.gameLayer = new VectorLayer({
-      source: new VectorSource(),
-      style: new Style({
-        fill: new Fill({
-          color: "rgba(255, 0, 0, 0.2)",
-        }),
-        stroke: new Stroke({
-          color: "#ff0000",
-          width: 2,
-        }),
-      }),
-    });
+    const levelConfig: GridConfig = {
+      center: [185000, 460000] as [number, number],
+      rings: 8,
+      hexSize: 100,
+      colors: defaultColors,
+    };
 
-    // Add layer to map
-    this.map.addLayer(this.gameLayer);
+    this.grid = new HexGrid(map, levelConfig, this.state, onExit);
+    this.interaction = new GameInteraction(map);
+    this.ui = new GameUI();
 
-    // Animate to location and draw circle
-    this.map.getView().animate(
-      {
-        center: this.TRAINING_GROUND,
-        zoom: 12,
-        duration: 2000,
-      },
-      () => {
-        // After animation, draw the circle
-        const circle = new Feature({
-          geometry: new Circle(this.TRAINING_GROUND, 500), // 500m radius
-        });
-
-        this.gameLayer?.getSource()?.addFeature(circle);
-      }
-    );
+    // Initialize game components
   }
 
   deactivate(): void {
-    if (this.gameLayer && this.map) {
-      this.map.removeLayer(this.gameLayer);
+    // Properly dispose of the grid
+    if (this.grid) {
+      this.grid.dispose();
     }
+    // Reset all components
+    this.grid = null;
+    this.state = null;
+    this.interaction = null;
+    this.ui = null;
     this.map = null;
-    this.gameLayer = null;
   }
 }
