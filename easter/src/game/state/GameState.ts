@@ -19,28 +19,51 @@ export class GameState {
     return Math.min(0.2 + (this.level - 1) * 0.05, 0.4); // Cap at 40%
   }
 
-  private generateMines(rings: number, percentage: number) {
+  private generateMines(
+    rings: number,
+    percentage: number,
+    safeCoord?: { q: number; r: number }
+  ) {
+    console.log(safeCoord ? "REGENERATING MINES" : "INITIAL MINE GENERATION");
     console.time("generateMines");
 
-    // Get all possible hex coordinates within rings
-    console.time("generateCoords");
+    // Clear existing state
+    this.mines.clear();
+
+    // Get safe zone if this is a regeneration
+    const safeZone = new Set<string>();
+    if (safeCoord) {
+      safeZone.add(`${safeCoord.q},${safeCoord.r}`);
+      this.getNeighbors(safeCoord.q, safeCoord.r).forEach(([q, r]) => {
+        safeZone.add(`${q},${r}`);
+      });
+    }
+
+    // Get all possible coordinates
     const coords: [number, number][] = [];
     for (let q = -rings + 1; q < rings; q++) {
       for (let r = -rings + 1; r < rings; r++) {
-        if (Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r)) < rings) {
+        const key = `${q},${r}`;
+        if (
+          Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r)) < rings &&
+          !safeZone.has(key)
+        ) {
           coords.push([q, r]);
         }
       }
     }
-    console.timeEnd("generateCoords");
 
-    console.time("placeMines");
-    let totalTries = 0;
-    const mineCount = Math.floor(coords.length * percentage);
+    // Calculate total cells and mine count
+    const totalHexes = coords.length + safeZone.size;
+    const mineCount = Math.floor(totalHexes * percentage);
+    this.totalCells = totalHexes - mineCount;
+
     console.log(
-      `Attempting to place ${mineCount} mines in ${coords.length} cells`
+      `Attempting to place ${mineCount} mines in ${coords.length} available cells`
     );
 
+    // Place mines
+    let totalTries = 0;
     for (let i = 0; i < mineCount; i++) {
       let placed = false;
       let tries = 0;
@@ -61,13 +84,9 @@ export class GameState {
         }
       }
     }
-    console.timeEnd("placeMines");
-    console.log(`Total placement attempts: ${totalTries}`);
-
-    // Store total non-mine cells for victory check
-    this.totalCells = coords.length;
 
     console.timeEnd("generateMines");
+    console.log(`Total placement attempts: ${totalTries}`);
   }
 
   private getNeighborPattern(q: number, r: number): string {
@@ -187,6 +206,7 @@ export class GameState {
     } else {
       this.flagged.add(key);
     }
+    this.checkVictory(); // Check victory after flag changes
   }
 
   isFlagged(q: number, r: number): boolean {
@@ -222,61 +242,44 @@ export class GameState {
   }
 
   private regenerateMines(safeQ: number, safeR: number) {
-    // Clear existing mines and numbers
-    this.mines.clear();
-
-    // Get safe zone (clicked cell and its neighbors)
-    const safeZone = new Set<string>();
-    safeZone.add(`${safeQ},${safeR}`);
-    this.getNeighbors(safeQ, safeR).forEach(([q, r]) => {
-      safeZone.add(`${q},${r}`);
+    this.generateMines(this.rings, this.getMinePercentage(), {
+      q: safeQ,
+      r: safeR,
     });
-
-    // Generate new mines avoiding safe zone
-    const coords: [number, number][] = [];
-    for (let q = -this.rings + 1; q < this.rings; q++) {
-      for (let r = -this.rings + 1; r < this.rings; r++) {
-        if (
-          Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r)) < this.rings &&
-          !safeZone.has(`${q},${r}`)
-        ) {
-          coords.push([q, r]);
-        }
-      }
-    }
-
-    // Place mines using the class method
-    const mineCount = Math.floor(coords.length * this.getMinePercentage());
-    for (let i = 0; i < mineCount; i++) {
-      let placed = false;
-      while (!placed && coords.length > 0) {
-        const idx = Math.floor(Math.random() * coords.length);
-        const [q, r] = coords[idx];
-
-        if (this.tryPlaceMine(q, r)) {
-          this.mines.add(`${q},${r}`);
-          coords.splice(idx, 1);
-          placed = true;
-        } else {
-          coords.splice(idx, 1);
-        }
-      }
-    }
-
-    // Store total non-mine cells for victory check
-    this.totalCells = coords.length;
   }
 
   private checkVictory(): void {
-    // Count revealed non-mine cells
-    let revealedCount = 0;
+    // Check if all non-mine cells are revealed
+    let revealedNonMines = 0;
     this.revealed.forEach((coord) => {
       if (!this.mines.has(coord)) {
-        revealedCount++;
+        revealedNonMines++;
       }
     });
 
-    if (revealedCount === this.totalCells) {
+    // Check if all mines are flagged
+    let correctlyFlaggedMines = 0;
+    this.flagged.forEach((coord) => {
+      if (this.mines.has(coord)) {
+        correctlyFlaggedMines++;
+      }
+    });
+
+    console.log("Victory Check:", {
+      revealedNonMines,
+      totalCells: this.totalCells,
+      correctlyFlaggedMines,
+      totalMines: this.mines.size,
+      revealed: Array.from(this.revealed),
+      flagged: Array.from(this.flagged),
+      mines: Array.from(this.mines),
+    });
+
+    // Victory if all non-mines revealed AND all mines flagged
+    if (
+      revealedNonMines === this.totalCells &&
+      correctlyFlaggedMines === this.mines.size
+    ) {
       this.hasWon = true;
       console.log(`Level ${this.level} completed!`);
     }
@@ -303,5 +306,9 @@ export class GameState {
 
   getLevel(): number {
     return this.level;
+  }
+
+  public resetState(): void {
+    this.reset();
   }
 }

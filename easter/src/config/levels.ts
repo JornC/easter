@@ -24,7 +24,12 @@ export const LOCALITIES: Record<string, LocalityConfig> = {
         hexSize: 100,
         minePercentage: 0.2,
       },
-      // Add more Dutch levels
+      {
+        center: [185000, 460000],
+        rings: 4,
+        hexSize: 100,
+        minePercentage: 0.25,
+      },
     ],
   },
   UK: {

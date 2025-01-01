@@ -35,7 +35,7 @@ export class HexGrid {
   private layer: any;
   private config: GridConfig;
   private state: GameState | null = null;
-  private onExit: Function;
+  private onGameOver: Function;
   private OL: OLComponents;
 
   constructor(
@@ -47,12 +47,12 @@ export class HexGrid {
       colors: defaultColors,
     },
     state: GameState,
-    onExit: Function
+    onGameOver: Function
   ) {
     this.map = map;
     this.config = config;
     this.state = state;
-    this.onExit = onExit;
+    this.onGameOver = onGameOver;
 
     this.OL = createOL(ol);
     this.layer = new this.OL.Vector.layer({
@@ -275,21 +275,9 @@ export class HexGrid {
         }
       });
 
-    if (isGameOver) {
-      // Game over - hit a mine
-      console.log("Game Over!");
-      setTimeout(() => {
-        this.onExit(); // Call the exit function after a short delay
-      }); // Give time to see the final state
-    } else if (this.state.hasWonLevel()) {
-      // Victory!
-      console.log(`Level ${this.state.getLevel()} completed!`);
-      setTimeout(() => {
-        this.state?.nextLevel();
-        // Recreate grid with new difficulty
-        this.layer.getSource()?.clear();
-        this.createGrid();
-      }, 1500); // Give time to see the victory state
+    if (isGameOver || this.state.hasWonLevel()) {
+      // Game over - either hit a mine or won
+      this.onGameOver(); // Call the game over handler instead of onExit
     }
   }
 
@@ -314,9 +302,31 @@ export class HexGrid {
     }
   }
 
+  refreshGrid() {
+    this.layer.getSource()?.clear();
+    this.createGrid();
+  }
+
   dispose() {
     if (this.map) {
       this.map.removeLayer(this.layer);
     }
+  }
+
+  public resetGrid(config: GridConfig): void {
+    this.layer.getSource()?.clear();
+    this.config = config;
+    this.createGrid();
+  }
+
+  public updateHexStyles(): void {
+    this.layer
+      .getSource()
+      ?.getFeatures()
+      .forEach((f: Feature) => {
+        if (!f.get("isOuterRing")) {
+          this.styleHex(f);
+        }
+      });
   }
 }
