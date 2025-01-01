@@ -1,8 +1,9 @@
 import type { Map } from "ol";
-import { HexGrid, GridConfig, defaultColors } from "../game/grid/HexGrid";
+import { HexGrid, GridConfig } from "../game/grid/HexGrid";
 import { GameLogic } from "../game/state/GameState";
 import { LOCALITIES, LocalityConfig } from "../config/levels";
 import { GamePanel } from "../game/ui/GamePanel";
+import { ProgressManager } from "../game/state/Progress";
 
 export class GameController {
   private grid: HexGrid | null = null;
@@ -10,10 +11,17 @@ export class GameController {
   private locality: LocalityConfig | null = null;
   private panel: GamePanel | null = null;
   private onExitCallback: Function | null = null;
+  private map: Map | null = null;
+  private progress: ProgressManager;
+
+  constructor() {
+    this.progress = new ProgressManager();
+  }
 
   activate(map: Map, locality: "NL" | "UK", onExit: Function) {
     this.onExitCallback = onExit;
     this.locality = LOCALITIES[locality];
+    this.map = map;
     if (!this.locality) {
       throw new Error(`Unknown locality: ${locality}`);
     }
@@ -25,7 +33,7 @@ export class GameController {
       center: level.center,
       rings: level.rings,
       hexSize: level.hexSize,
-      colors: defaultColors,
+      colors: level.colors,
     };
 
     this.panel = new GamePanel(
@@ -34,10 +42,10 @@ export class GameController {
           this.onExitCallback();
         }
       },
-      () => this.retryLevel(),
-      () => this.nextLevel()
+      (level: number) => this.selectLevel(level - 1),
+      this.locality.levels.length,
+      this.progress.getMaxUnlockedLevel()
     );
-    this.panel.updateLevel(1);
 
     this.grid = new HexGrid(map, gridConfig, this.gameLogic, () =>
       this.handleGameOver()
@@ -45,39 +53,60 @@ export class GameController {
   }
 
   private handleGameOver() {
-    if (this.panel && this.gameLogic) {
+    if (this.panel && this.gameLogic && this.locality) {
       const isVictory = this.gameLogic.getState() === "victory";
       this.panel.setGameOver(isVictory);
-    }
-  }
 
-  private nextLevel() {
-    if (this.gameLogic && this.locality && this.grid) {
-      const nextLevelIndex = this.gameLogic.getLevel();
-      if (nextLevelIndex < this.locality.levels.length) {
-        const level = this.locality.levels[nextLevelIndex];
-        this.gameLogic.nextLevel();
-
-        const gridConfig: GridConfig = {
-          center: level.center,
-          rings: level.rings,
-          hexSize: level.hexSize,
-          colors: defaultColors,
-        };
-
-        this.grid.resetGrid(gridConfig);
-        this.panel?.updateLevel(this.gameLogic.getLevel());
-        this.panel?.clearGameOver();
+      if (isVictory) {
+        const currentLevel = this.gameLogic.getLevel();
+        if (
+          currentLevel === this.progress.getMaxUnlockedLevel() &&
+          currentLevel < this.locality.levels.length
+        ) {
+          this.progress.unlockNextLevel();
+          this.panel.unlockNextLevel();
+        }
       }
     }
   }
 
-  private retryLevel() {
-    if (this.gameLogic && this.panel) {
-      this.gameLogic.resetLevel();
-      this.grid?.updateHexStyles();
-      this.panel.clearGameOver();
+  private selectLevel(levelIndex: number) {
+    if (!this.locality || !this.map) return;
+
+    // Validate level is unlocked
+    if (levelIndex >= this.progress.getMaxUnlockedLevel()) return;
+
+    const level = this.locality.levels[levelIndex];
+    if (!level) return;
+
+    // Cleanup old grid first
+    if (this.grid) {
+      this.grid.dispose();
+      this.grid = null;
     }
+
+    // Create new game logic for selected level
+    this.gameLogic = new GameLogic(
+      level.rings,
+      level.minePercentage,
+      levelIndex + 1
+    );
+
+    const gridConfig: GridConfig = {
+      center: level.center,
+      rings: level.rings,
+      hexSize: level.hexSize,
+      colors: level.colors,
+    };
+
+    // Create new grid with new game logic
+    this.grid = new HexGrid(this.map, gridConfig, this.gameLogic, () =>
+      this.handleGameOver()
+    );
+
+    // Update UI
+    this.panel?.clearGameOver();
+    this.panel?.updateLevel(levelIndex + 1);
   }
 
   deactivate() {
@@ -92,5 +121,6 @@ export class GameController {
     this.gameLogic = null;
     this.locality = null;
     this.onExitCallback = null;
+    this.map = null;
   }
 }

@@ -25,14 +25,16 @@ export function stringToCoord(str: string): Coordinate {
 
 export class GameLogic {
   private state: GameState;
+  private minePercentage: number;
 
-  constructor(rings: number, minePercentage: number = 0.2) {
+  constructor(rings: number, minePercentage: number = 0.2, level: number = 1) {
+    this.minePercentage = minePercentage;
     this.state = {
       state: "initial",
       revealed: new Set(),
       flagged: new Set(),
       mines: new Set(),
-      level: 1,
+      level,
       rings,
       firstClick: true,
       totalCells: 0,
@@ -166,7 +168,7 @@ export class GameLogic {
       this.state.firstClick = false;
       this.state.state = "playing";
       if (this.state.mines.has(key) || this.countNeighborMines(coord) !== 0) {
-        this.generateMines(this.state.rings, 0.2, coord);
+        this.generateMines(this.state.rings, this.minePercentage, coord);
       }
     }
 
@@ -239,6 +241,7 @@ export class GameLogic {
       mines: new Set(),
       level: this.state.level + 1,
       firstClick: true,
+      rings: this.state.rings + 1,
     };
     this.generateMines(
       this.state.rings,

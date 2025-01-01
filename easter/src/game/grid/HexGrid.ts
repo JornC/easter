@@ -7,28 +7,66 @@ import { GameLogic, Coordinate, coordToString } from "../state/GameState";
 
 declare const ol: any;
 
+export interface GridColors {
+  outerRingFill: string;
+  outerRingBorder: string;
+  innerFill: string;
+  innerBorder: string;
+  innerHover: string;
+  revealedFill: string;
+}
+
 export interface GridConfig {
   center: [number, number];
   rings: number;
   hexSize: number;
-  colors: {
-    outerRingFill: string;
-    outerRingBorder: string;
-    innerFill: string;
-    innerBorder: string;
-    innerHover: string;
-    revealedFill: string;
-  };
+  colors: GridColors;
 }
 
-export const defaultColors = {
-  outerRingFill: "#3392e0",
-  outerRingBorder: "#ffffff",
-  innerFill: "#84bff0",
-  innerBorder: "#3392e0",
-  innerHover: "#cc6666",
-  revealedFill: "#ffffff33",
+export const colorSchemes = {
+  blue: {
+    outerRingFill: "#3392e0",
+    outerRingBorder: "#ffffff",
+    innerFill: "#84bff0",
+    innerBorder: "#3392e0",
+    innerHover: "#cc6666",
+    revealedFill: "#ffffff33",
+  },
+  green: {
+    outerRingFill: "#4CAF50",
+    outerRingBorder: "#ffffff",
+    innerFill: "#81C784",
+    innerBorder: "#4CAF50",
+    innerHover: "#cc6666",
+    revealedFill: "#ffffff33",
+  },
+  purple: {
+    outerRingFill: "#9C27B0",
+    outerRingBorder: "#ffffff",
+    innerFill: "#CE93D8",
+    innerBorder: "#9C27B0",
+    innerHover: "#cc6666",
+    revealedFill: "#ffffff33",
+  },
+  orange: {
+    outerRingFill: "#FF9800",
+    outerRingBorder: "#ffffff",
+    innerFill: "#FFB74D",
+    innerBorder: "#FF9800",
+    innerHover: "#cc6666",
+    revealedFill: "#ffffff33",
+  },
+  teal: {
+    outerRingFill: "#009688",
+    outerRingBorder: "#ffffff",
+    innerFill: "#4DB6AC",
+    innerBorder: "#009688",
+    innerHover: "#cc6666",
+    revealedFill: "#ffffff33",
+  },
 } as const;
+
+export const defaultColors = colorSchemes.blue;
 
 export class HexGrid {
   private map: Map;
@@ -37,6 +75,10 @@ export class HexGrid {
   private gameLogic: GameLogic;
   private onGameOver: Function;
   private OL: OLComponents;
+  private clickListener: any;
+  private moveListener: any;
+  private outListener: any;
+  private contextListener: any;
 
   constructor(
     map: Map,
@@ -71,7 +113,61 @@ export class HexGrid {
     this.map.addLayer(this.layer);
 
     this.createGrid();
+    this.setupEventListeners();
     this.zoomToGrid();
+  }
+
+  private setupEventListeners() {
+    // Add hover interaction
+    let hoveredFeature: Feature | null = null;
+
+    this.moveListener = (e: any) => {
+      const feature = this.map.forEachFeatureAtPixel(e.pixel, (f: any) => f);
+
+      if (hoveredFeature) {
+        this.styleHex(hoveredFeature);
+        hoveredFeature = null;
+      }
+
+      if (feature instanceof Feature && !feature.get("isOuterRing")) {
+        hoveredFeature = feature;
+        this.styleHex(feature, true);
+      }
+
+      this.map.render();
+    };
+
+    this.outListener = () => {
+      if (hoveredFeature) {
+        this.styleHex(hoveredFeature);
+        hoveredFeature = null;
+        this.map.render();
+      }
+    };
+
+    this.clickListener = (e: any) => {
+      const feature = this.map.forEachFeatureAtPixel(e.pixel, (f: any) => f);
+      if (feature instanceof Feature && !feature.get("isOuterRing")) {
+        this.handleHexClick(feature);
+      }
+    };
+
+    this.contextListener = (e: any) => {
+      e.preventDefault();
+      const pixel = this.map.getEventPixel(e);
+      const feature = this.map.forEachFeatureAtPixel(pixel, (f: any) => f);
+
+      if (feature instanceof Feature && !feature.get("isOuterRing")) {
+        this.handleRightClick(feature);
+      }
+    };
+
+    this.map.on("pointermove", this.moveListener);
+    this.map.getViewport().addEventListener("mouseout", this.outListener);
+    this.map.on("click", this.clickListener);
+    this.map
+      .getViewport()
+      .addEventListener("contextmenu", this.contextListener);
   }
 
   private createGrid() {
@@ -111,50 +207,6 @@ export class HexGrid {
 
       this.styleHex(feature);
       this.layer.getSource()?.addFeature(feature);
-    });
-
-    // Add hover interaction
-    let hoveredFeature: Feature | null = null;
-
-    this.map.on("pointermove", (e) => {
-      const feature = this.map.forEachFeatureAtPixel(e.pixel, (f) => f);
-
-      if (hoveredFeature) {
-        this.styleHex(hoveredFeature);
-        hoveredFeature = null;
-      }
-
-      if (feature instanceof Feature && !feature.get("isOuterRing")) {
-        hoveredFeature = feature;
-        this.styleHex(feature, true);
-      }
-
-      this.map.render();
-    });
-
-    this.map.getViewport().addEventListener("mouseout", () => {
-      if (hoveredFeature) {
-        this.styleHex(hoveredFeature);
-        hoveredFeature = null;
-        this.map.render();
-      }
-    });
-
-    this.map.on("click", (e) => {
-      const feature = this.map.forEachFeatureAtPixel(e.pixel, (f) => f);
-      if (feature instanceof Feature && !feature.get("isOuterRing")) {
-        this.handleHexClick(feature);
-      }
-    });
-
-    this.map.getViewport().addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      const pixel = this.map.getEventPixel(e);
-      const feature = this.map.forEachFeatureAtPixel(pixel, (f) => f);
-
-      if (feature instanceof Feature && !feature.get("isOuterRing")) {
-        this.handleRightClick(feature);
-      }
     });
   }
 
@@ -296,7 +348,20 @@ export class HexGrid {
 
   dispose() {
     if (this.map) {
+      // Remove event listeners
+      this.map.un("pointermove", this.moveListener);
+      this.map.getViewport().removeEventListener("mouseout", this.outListener);
+      this.map.un("click", this.clickListener);
+      this.map
+        .getViewport()
+        .removeEventListener("contextmenu", this.contextListener);
+
+      // Remove layer
       this.map.removeLayer(this.layer);
+
+      // Clear source
+      this.layer.getSource().clear();
+      this.layer = null;
     }
   }
 

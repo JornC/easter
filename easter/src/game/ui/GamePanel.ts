@@ -1,14 +1,22 @@
 export class GamePanel {
   private container: HTMLDivElement;
   private onExit: Function;
-  private onRetry: Function;
-  private onNextLevel: Function;
-  private buttonContainer: HTMLDivElement;
+  private buttonContainer!: HTMLDivElement;
+  private currentLevel: number = 1;
+  private numLevels: number;
+  private maxUnlockedLevel: number;
+  private onSelectLevel: (level: number) => void;
 
-  constructor(onExit: Function, onRetry: Function, onNextLevel: Function) {
+  constructor(
+    onExit: Function,
+    onSelectLevel: (level: number) => void,
+    numLevels: number,
+    maxUnlockedLevel: number
+  ) {
     this.onExit = onExit;
-    this.onRetry = onRetry;
-    this.onNextLevel = onNextLevel;
+    this.numLevels = numLevels;
+    this.maxUnlockedLevel = maxUnlockedLevel;
+    this.onSelectLevel = onSelectLevel;
 
     // Add keyframe animation for victory pulse
     const style = document.createElement("style");
@@ -23,6 +31,9 @@ export class GamePanel {
 
     this.container = this.createPanel();
     document.body.appendChild(this.container);
+
+    // Create level buttons
+    this.createLevelButtons();
   }
 
   private createPanel(): HTMLDivElement {
@@ -40,54 +51,64 @@ export class GamePanel {
       min-width: 200px;
       border: 2px solid #3392e0;
       backdrop-filter: blur(10px);
-    `;
-
-    const title = document.createElement("h2");
-    title.textContent = "Level 1";
-    title.style.cssText = `
-      margin: 0 0 1rem 0;
-      color: #3392e0;
-      font-size: 1.5rem;
-      text-align: center;
-      text-transform: uppercase;
-      letter-spacing: 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
     `;
 
     const status = document.createElement("div");
     status.id = "game-status";
-    status.style.cssText = `
-      margin: 0.5rem 0;
-      text-align: center;
-      font-size: 1.1rem;
-      min-height: 1.5rem;
-      color: #666;
-    `;
 
     this.buttonContainer = document.createElement("div");
     this.buttonContainer.style.cssText = `
       display: flex;
       flex-direction: column;
       gap: 0.8rem;
+      margin-bottom: 0.8rem;
     `;
 
-    const retryButton = document.createElement("button");
-    retryButton.textContent = "🔄 Retry Level";
-    retryButton.onclick = () => this.onRetry();
-    retryButton.style.cssText = this.getButtonStyle();
-
     const exitButton = document.createElement("button");
-    exitButton.textContent = "❌ Exit Game";
+    exitButton.textContent = "🚪 Exit Game";
     exitButton.onclick = () => this.onExit();
-    exitButton.style.cssText = this.getButtonStyle("#ff4444");
+    exitButton.style.cssText = this.getButtonStyle("#666");
+    exitButton.style.width = "100%";
 
-    this.buttonContainer.appendChild(retryButton);
-    this.buttonContainer.appendChild(exitButton);
-
-    panel.appendChild(title);
     panel.appendChild(status);
     panel.appendChild(this.buttonContainer);
+    panel.appendChild(exitButton);
 
     return panel;
+  }
+
+  private createLevelButtons() {
+    // Clear existing buttons
+    this.buttonContainer.innerHTML = "";
+
+    // Create buttons for each available level
+    for (let level = 1; level <= this.numLevels; level++) {
+      const button = document.createElement("button");
+      const isUnlocked = level <= this.maxUnlockedLevel;
+
+      button.textContent = isUnlocked
+        ? `🎯 Level ${level}`
+        : `🔒 Level ${level}`;
+
+      if (isUnlocked) {
+        button.onclick = () => this.onSelectLevel(level);
+      }
+
+      button.style.cssText = this.getButtonStyle(
+        isUnlocked
+          ? level === this.currentLevel
+            ? "#3392e0"
+            : "#84bff0"
+          : "#cccccc"
+      );
+
+      button.dataset.level = level.toString();
+      button.dataset.unlocked = isUnlocked.toString();
+      this.buttonContainer.appendChild(button);
+    }
   }
 
   private getButtonStyle(bgColor: string = "#3392e0"): string {
@@ -99,7 +120,7 @@ export class GamePanel {
       color: white;
       font-size: 1rem;
       cursor: pointer;
-      transition: transform 0.1s, opacity 0.1s;
+      transition: all 0.2s;
       font-weight: bold;
       text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
       &:hover {
@@ -113,14 +134,26 @@ export class GamePanel {
   }
 
   updateLevel(level: number) {
-    const title = this.container.querySelector("h2");
-    if (title) {
-      title.textContent = `Level ${level}`;
-    }
+    this.currentLevel = level;
+    // Update button styles
+    const buttons =
+      this.buttonContainer.querySelectorAll<HTMLButtonElement>("button");
+    buttons.forEach((button) => {
+      const buttonLevel = parseInt(button.dataset.level || "1");
+      const isUnlocked = button.dataset.unlocked === "true";
+      button.style.cssText = this.getButtonStyle(
+        isUnlocked ? (buttonLevel === level ? "#3392e0" : "#84bff0") : "#cccccc"
+      );
+    });
+  }
+
+  unlockNextLevel() {
+    this.maxUnlockedLevel++;
+    this.createLevelButtons();
   }
 
   setGameOver(isVictory: boolean) {
-    const status = this.container.querySelector("#game-status");
+    const status = this.container.querySelector<HTMLDivElement>("#game-status");
     if (status) {
       if (isVictory) {
         status.textContent = "🎉 VICTORY!";
@@ -134,26 +167,6 @@ export class GamePanel {
           text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
           animation: pulse 1s infinite;
         `;
-
-        // Remove existing next level button if any
-        const existingNextButton =
-          this.buttonContainer.querySelector("[data-next-level]");
-        if (existingNextButton) {
-          existingNextButton.remove();
-        }
-
-        // Add Next Level button
-        const nextLevelButton = document.createElement("button");
-        nextLevelButton.textContent = "⭐ Next Level";
-        nextLevelButton.dataset.nextLevel = "true";
-        nextLevelButton.onclick = () => this.onNextLevel();
-        nextLevelButton.style.cssText = this.getButtonStyle("#4CAF50");
-
-        // Insert at the top of button container
-        this.buttonContainer.insertBefore(
-          nextLevelButton,
-          this.buttonContainer.firstChild
-        );
       } else {
         status.textContent = "💥 Game Over!";
         status.style.color = "#f44336";
@@ -162,17 +175,10 @@ export class GamePanel {
   }
 
   clearGameOver() {
-    const status = this.container.querySelector("#game-status");
+    const status = this.container.querySelector<HTMLDivElement>("#game-status");
     if (status) {
       status.textContent = "";
       status.style.cssText = "";
-    }
-
-    // Remove next level button if exists
-    const nextLevelButton =
-      this.buttonContainer.querySelector("[data-next-level]");
-    if (nextLevelButton) {
-      nextLevelButton.remove();
     }
   }
 
