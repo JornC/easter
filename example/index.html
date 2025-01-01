@@ -128,7 +128,7 @@
 
       activateButton.addEventListener("click", function () {
         if (window.__MAP_GAME__?.available) {
-          window.__MAP_GAME__.instance.activate(map, handleExit);
+          window.__MAP_GAME__.instance.activate(map, "NL", handleExit);
           this.style.display = "none";
         }
       });

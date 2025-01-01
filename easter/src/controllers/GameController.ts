@@ -1,45 +1,46 @@
-import type { GameInstance } from "../types";
-import { Map } from "ol";
-import { GridConfig, HexGrid, defaultColors } from "../game/grid/HexGrid";
+import type { Map } from "ol";
+import { HexGrid, GridConfig } from "../game/grid/HexGrid";
 import { GameState } from "../game/state/GameState";
-import { GameInteraction } from "../game/interaction/GameInteraction";
-import { GameUI } from "../game/ui/GameUI";
+import { LOCALITIES, LocalityConfig } from "../config/levels";
 
-export class GameController implements GameInstance {
-  private map: Map | null = null;
+export class GameController {
   private grid: HexGrid | null = null;
   private state: GameState | null = null;
-  private interaction: GameInteraction | null = null;
-  private ui: GameUI | null = null;
+  private locality: LocalityConfig | null = null;
 
-  activate(map: Map, onExit: Function): void {
-    this.map = map;
-    this.state = new GameState(8, 0.2);
+  activate(map: Map, locality: "NL" | "UK", onExit: Function) {
+    // Get locality config
+    this.locality = LOCALITIES[locality];
+    if (!this.locality) {
+      throw new Error(`Unknown locality: ${locality}`);
+    }
 
-    const levelConfig: GridConfig = {
-      center: [185000, 460000] as [number, number],
-      rings: 8,
-      hexSize: 100,
-      colors: defaultColors,
+    // Create initial game state with first level
+    const level = this.locality.levels[0];
+    this.state = new GameState(level.rings, level.minePercentage);
+
+    // Create grid with locality-specific config
+    const gridConfig: GridConfig = {
+      center: level.center,
+      rings: level.rings,
+      hexSize: level.hexSize,
+      colors: {
+        outerRingFill: "#3392e0",
+        outerRingBorder: "#ffffff",
+        innerFill: "#84bff0",
+        innerBorder: "#3392e0",
+        innerHover: "#cc6666",
+        revealedFill: "#ffffff33",
+      },
     };
 
-    this.grid = new HexGrid(map, levelConfig, this.state, onExit);
-    this.interaction = new GameInteraction(map);
-    this.ui = new GameUI();
-
-    // Initialize game components
+    this.grid = new HexGrid(map, gridConfig, this.state, onExit);
   }
 
-  deactivate(): void {
-    // Properly dispose of the grid
-    if (this.grid) {
-      this.grid.dispose();
-    }
-    // Reset all components
+  deactivate() {
+    this.grid?.dispose();
     this.grid = null;
     this.state = null;
-    this.interaction = null;
-    this.ui = null;
-    this.map = null;
+    this.locality = null;
   }
 }

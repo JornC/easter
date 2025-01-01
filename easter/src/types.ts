@@ -1,7 +1,7 @@
 import type { Map } from "ol";
 
 export interface GameInstance {
-  activate: (map: Map, onExit: Function) => void;
+  activate: (map: Map, locality: 'NL' | 'UK', onExit: Function) => void;
   deactivate: () => void;
 }
 
