@@ -3,7 +3,7 @@ import { defineHex, Grid, Orientation, spiral } from "honeycomb-grid";
 import { Polygon } from "ol/geom";
 import { Feature } from "ol";
 import { createOL, OLComponents } from "./ol-wrapper";
-import { GameState } from "../state/GameState";
+import { GameLogic, Coordinate, coordToString } from "../state/GameState";
 
 declare const ol: any;
 
@@ -34,7 +34,7 @@ export class HexGrid {
   private map: Map;
   private layer: any;
   private config: GridConfig;
-  private state: GameState | null = null;
+  private gameLogic: GameLogic;
   private onGameOver: Function;
   private OL: OLComponents;
 
@@ -46,12 +46,12 @@ export class HexGrid {
       hexSize: 100,
       colors: defaultColors,
     },
-    state: GameState,
+    gameLogic: GameLogic,
     onGameOver: Function
   ) {
     this.map = map;
     this.config = config;
-    this.state = state;
+    this.gameLogic = gameLogic;
     this.onGameOver = onGameOver;
 
     this.OL = createOL(ol);
@@ -103,7 +103,7 @@ export class HexGrid {
               offsetY + corner.y,
             ]),
             [offsetX + hex.corners[0].x, offsetY + hex.corners[0].y],
-          ], // Close polygon
+          ],
         ]),
         isOuterRing: isOuterRing,
         hex: hex,
@@ -119,13 +119,11 @@ export class HexGrid {
     this.map.on("pointermove", (e) => {
       const feature = this.map.forEachFeatureAtPixel(e.pixel, (f) => f);
 
-      // Reset previous hover
       if (hoveredFeature) {
         this.styleHex(hoveredFeature);
         hoveredFeature = null;
       }
 
-      // Apply new hover
       if (feature instanceof Feature && !feature.get("isOuterRing")) {
         hoveredFeature = feature;
         this.styleHex(feature, true);
@@ -134,7 +132,6 @@ export class HexGrid {
       this.map.render();
     });
 
-    // Remove hover when leaving map
     this.map.getViewport().addEventListener("mouseout", () => {
       if (hoveredFeature) {
         this.styleHex(hoveredFeature);
@@ -143,7 +140,6 @@ export class HexGrid {
       }
     });
 
-    // Add click handler
     this.map.on("click", (e) => {
       const feature = this.map.forEachFeatureAtPixel(e.pixel, (f) => f);
       if (feature instanceof Feature && !feature.get("isOuterRing")) {
@@ -151,10 +147,8 @@ export class HexGrid {
       }
     });
 
-    // Add right-click handler
     this.map.getViewport().addEventListener("contextmenu", (e) => {
-      e.preventDefault(); // Prevent default context menu
-
+      e.preventDefault();
       const pixel = this.map.getEventPixel(e);
       const feature = this.map.forEachFeatureAtPixel(pixel, (f) => f);
 
@@ -168,29 +162,23 @@ export class HexGrid {
     const isOuterRing = feature.get("isOuterRing");
     const hex = feature.get("hex");
 
-    // Early return if this isn't one of our hex features
-    if (!hex) {
-      return;
-    }
+    if (!hex) return;
 
-    if (!isOuterRing && this.state) {
-      const isMine = this.state.isMine(hex.q, hex.r);
-      const number = this.state.getNumber(hex.q, hex.r);
-      const isRevealed = this.state.isRevealed(hex.q, hex.r);
-      const isGameOver = this.state.getGameOver();
-      const isFlagged = this.state.isFlagged(hex.q, hex.r);
+    if (!isOuterRing) {
+      const coord: Coordinate = { q: hex.q, r: hex.r };
+      const isMine = this.gameLogic.isMine(coord);
+      const number = this.gameLogic.getNumber(coord);
+      const isRevealed = this.gameLogic.isRevealed(coord);
+      const isFlagged = this.gameLogic.isFlagged(coord);
+      const gameState = this.gameLogic.getState();
 
       const style = new this.OL.Style.base({
         stroke: new this.OL.Style.stroke({
-          color: isOuterRing
-            ? this.config.colors.outerRingBorder
-            : this.config.colors.innerBorder,
+          color: this.config.colors.innerBorder,
           width: isHovered ? 3 : 2,
         }),
         fill: new this.OL.Style.fill({
-          color: isOuterRing
-            ? this.config.colors.outerRingFill
-            : isRevealed
+          color: isRevealed
             ? isMine
               ? "#ff0000"
               : this.config.colors.revealedFill
@@ -199,7 +187,7 @@ export class HexGrid {
             : this.config.colors.innerFill,
         }),
         text:
-          isRevealed || (isGameOver && isMine)
+          isRevealed || (gameState === "defeat" && isMine && !isFlagged)
             ? new this.OL.Style.text({
                 text: isMine ? "💣" : number > 0 ? number.toString() : "",
                 font: "bold 24px Arial",
@@ -230,10 +218,8 @@ export class HexGrid {
 
       feature.setStyle(style);
 
-      // Add victory animation if won
-      if (this.state?.hasWonLevel()) {
-        style.setZIndex(10); // Bring to front during victory
-        // Could add more visual effects here
+      if (gameState === "victory") {
+        style.setZIndex(10);
       }
 
       return style;
@@ -241,17 +227,11 @@ export class HexGrid {
 
     const style = new this.OL.Style.base({
       stroke: new this.OL.Style.stroke({
-        color: isOuterRing
-          ? this.config.colors.outerRingBorder
-          : this.config.colors.innerBorder,
+        color: this.config.colors.outerRingBorder,
         width: isHovered ? 3 : 2,
       }),
       fill: new this.OL.Style.fill({
-        color: isOuterRing
-          ? this.config.colors.outerRingFill
-          : isHovered
-          ? this.config.colors.innerHover
-          : this.config.colors.innerFill,
+        color: this.config.colors.outerRingFill,
       }),
     });
 
@@ -260,12 +240,39 @@ export class HexGrid {
   }
 
   private handleHexClick(feature: Feature) {
-    if (!this.state) return;
-
     const hex = feature.get("hex");
-    const isGameOver = this.state.revealCell(hex.q, hex.r);
+    const coord: Coordinate = { q: hex.q, r: hex.r };
 
-    // Refresh all features since multiple cells might have been revealed
+    const prevState = this.gameLogic.getState();
+    this.gameLogic.revealCell(coord);
+    const newState = this.gameLogic.getState();
+
+    this.updateAllHexStyles();
+
+    if (
+      newState !== prevState &&
+      (newState === "victory" || newState === "defeat")
+    ) {
+      this.onGameOver();
+    }
+  }
+
+  private handleRightClick(feature: Feature) {
+    const hex = feature.get("hex");
+    const coord: Coordinate = { q: hex.q, r: hex.r };
+
+    const prevState = this.gameLogic.getState();
+    this.gameLogic.toggleFlag(coord);
+    const newState = this.gameLogic.getState();
+
+    this.updateAllHexStyles();
+
+    if (newState !== prevState && newState === "victory") {
+      this.onGameOver();
+    }
+  }
+
+  private updateAllHexStyles(): void {
     this.layer
       .getSource()
       ?.getFeatures()
@@ -274,11 +281,6 @@ export class HexGrid {
           this.styleHex(f);
         }
       });
-
-    if (isGameOver || this.state.hasWonLevel()) {
-      // Game over - either hit a mine or won
-      this.onGameOver(); // Call the game over handler instead of onExit
-    }
   }
 
   private zoomToGrid() {
@@ -290,21 +292,6 @@ export class HexGrid {
         duration: 1000,
       });
     }
-  }
-
-  private handleRightClick(feature: Feature) {
-    if (!this.state) return;
-
-    const hex = feature.get("hex");
-    if (!this.state.isRevealed(hex.q, hex.r)) {
-      this.state.toggleFlag(hex.q, hex.r);
-      this.styleHex(feature);
-    }
-  }
-
-  refreshGrid() {
-    this.layer.getSource()?.clear();
-    this.createGrid();
   }
 
   dispose() {
@@ -320,13 +307,6 @@ export class HexGrid {
   }
 
   public updateHexStyles(): void {
-    this.layer
-      .getSource()
-      ?.getFeatures()
-      .forEach((f: Feature) => {
-        if (!f.get("isOuterRing")) {
-          this.styleHex(f);
-        }
-      });
+    this.updateAllHexStyles();
   }
 }

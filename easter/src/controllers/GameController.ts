@@ -1,12 +1,12 @@
 import type { Map } from "ol";
 import { HexGrid, GridConfig, defaultColors } from "../game/grid/HexGrid";
-import { GameState } from "../game/state/GameState";
+import { GameLogic } from "../game/state/GameState";
 import { LOCALITIES, LocalityConfig } from "../config/levels";
 import { GamePanel } from "../game/ui/GamePanel";
 
 export class GameController {
   private grid: HexGrid | null = null;
-  private state: GameState | null = null;
+  private gameLogic: GameLogic | null = null;
   private locality: LocalityConfig | null = null;
   private panel: GamePanel | null = null;
   private onExitCallback: Function | null = null;
@@ -19,7 +19,7 @@ export class GameController {
     }
 
     const level = this.locality.levels[0];
-    this.state = new GameState(level.rings, level.minePercentage);
+    this.gameLogic = new GameLogic(level.rings, level.minePercentage);
 
     const gridConfig: GridConfig = {
       center: level.center,
@@ -39,26 +39,25 @@ export class GameController {
     );
     this.panel.updateLevel(1);
 
-    this.grid = new HexGrid(map, gridConfig, this.state, () =>
+    this.grid = new HexGrid(map, gridConfig, this.gameLogic, () =>
       this.handleGameOver()
     );
   }
 
   private handleGameOver() {
-    if (this.panel && this.state) {
-      const isVictory = this.state.hasWonLevel();
+    if (this.panel && this.gameLogic) {
+      const isVictory = this.gameLogic.getState() === "victory";
       this.panel.setGameOver(isVictory);
     }
   }
 
   private nextLevel() {
-    if (this.state && this.locality && this.grid) {
-      const nextLevelIndex = this.state.getLevel();
+    if (this.gameLogic && this.locality && this.grid) {
+      const nextLevelIndex = this.gameLogic.getLevel();
       if (nextLevelIndex < this.locality.levels.length) {
         const level = this.locality.levels[nextLevelIndex];
-        this.state.nextLevel();
+        this.gameLogic.nextLevel();
 
-        // Update grid with new level config
         const gridConfig: GridConfig = {
           center: level.center,
           rings: level.rings,
@@ -67,22 +66,21 @@ export class GameController {
         };
 
         this.grid.resetGrid(gridConfig);
-        this.panel?.updateLevel(this.state.getLevel());
+        this.panel?.updateLevel(this.gameLogic.getLevel());
         this.panel?.clearGameOver();
       }
     }
   }
 
   private retryLevel() {
-    if (this.state && this.panel) {
-      this.state.resetState();
+    if (this.gameLogic && this.panel) {
+      this.gameLogic.resetLevel();
       this.grid?.updateHexStyles();
       this.panel.clearGameOver();
     }
   }
 
   deactivate() {
-    // Only cleanup, don't call onExitCallback
     if (this.grid) {
       this.grid.dispose();
       this.grid = null;
@@ -91,7 +89,7 @@ export class GameController {
       this.panel.dispose();
       this.panel = null;
     }
-    this.state = null;
+    this.gameLogic = null;
     this.locality = null;
     this.onExitCallback = null;
   }
