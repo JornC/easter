@@ -3,7 +3,7 @@ import { defineHex, Grid, Orientation, spiral } from "honeycomb-grid";
 import { Polygon } from "ol/geom";
 import { Feature } from "ol";
 import { createOL, OLComponents } from "./ol-wrapper";
-import { GameLogic, Coordinate, coordToString } from "../state/GameState";
+import { GameLogic, Coordinate } from "../state/GameState";
 
 declare const ol: any;
 
