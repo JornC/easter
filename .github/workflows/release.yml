@@ -3,14 +3,14 @@ name: Deploy to Nexus
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install dependencies
@@ -18,28 +18,15 @@ jobs:
           cd easter
           npm install
 
-      - name: Get package version
-        id: version
-        run: echo "PACKAGE_VERSION=$(jq -r .version easter/package.json)" >> $GITHUB_ENV
-
-      - name: Check if version already exists in Nexus
-        run: |
-          VERSION=${{ env.PACKAGE_VERSION }}
-          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" -u "${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASSWORD }}" \
-            "https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/")
-          if [ "$STATUS_CODE" == "200" ]; then
-            echo "Error: Version ${VERSION} already exists in Nexus. Aborting."
-            exit 1
-          fi
-
-      - name: Build project
+      - name: Build
         run: |
           cd easter
           npm run build
 
-      - name: Upload to Nexus
+      - name: Configure npm
+        run: echo "//nexus.example.com/repository/npm-repo/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: Publish
         run: |
-          VERSION=${{ env.PACKAGE_VERSION }}
-          curl -u "${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASSWORD }}" \
-            --upload-file "easter/dist/*" \
-            "https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/"
+          cd easter
+          npm publish --registry "https://nexus.example.com/repository/npm-repo/"
