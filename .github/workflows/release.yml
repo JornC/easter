@@ -3,14 +3,14 @@ name: Deploy to Nexus
 on:
   push:
     tags:
-      - "*"
+      - '*'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install dependencies
@@ -18,15 +18,40 @@ jobs:
           cd easter
           npm install
 
-      - name: Build
+      - name: Get package version
+        id: version
+        run: echo "PACKAGE_VERSION=$(jq -r .version easter/package.json)" >> $GITHUB_ENV
+
+      - name: Build project
         run: |
           cd easter
           npm run build
 
-      - name: Configure npm
-        run: echo "//nexus.example.com/repository/npm-repo/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
-
-      - name: Publish
+      - name: Check if version already exists in Nexus
         run: |
-          cd easter
-          npm publish --registry "https://nexus.example.com/repository/npm-repo/"
+          VERSION=${{ env.PACKAGE_VERSION }}
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" -u "${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASSWORD }}" \
+            "https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/")
+          if [ "$STATUS_CODE" == "200" ]; then
+            echo "Error: Version ${VERSION} already exists in Nexus. Aborting."
+            exit 1
+          fi
+      
+      - name: Test Upload without Sending
+        run: |
+          VERSION=${{ env.PACKAGE_VERSION }}
+          for file in $(find easter/dist -type f); do
+            REL_PATH=${file#easter/dist/} # Remove leading directory
+            echo "Would upload: $file -> https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/${REL_PATH}"
+          done
+
+
+      #- name: Upload built files to Nexus
+      #  run: |
+      #    VERSION=${{ env.PACKAGE_VERSION }}
+      #    for file in $(find easter/dist -type f); do
+      #      REL_PATH=${file#easter/dist/} # Remove leading directory
+      #      curl -u "${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASSWORD }}" \
+      #        --upload-file "$file" \
+      #        "https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/${REL_PATH}"
+      #    done
