@@ -40,9 +40,8 @@ export class GamePanel {
     const panel = document.createElement("div");
     panel.style.cssText = `
       position: fixed;
-      left: 2rem;
-      top: 50%;
-      transform: translateY(-50%);
+      right: 4rem;
+      bottom: 4rem;
       background: rgba(255, 255, 255, 0.95);
       padding: 1.5rem;
       border-radius: 1rem;
@@ -54,6 +53,7 @@ export class GamePanel {
       display: flex;
       flex-direction: column;
       gap: 0.8rem;
+      z-index: 1;
     `;
 
     const status = document.createElement("div");
