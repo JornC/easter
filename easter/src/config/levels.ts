@@ -6,7 +6,7 @@ const blueColors: GridColors = {
   innerFill: "#bbdefb",
   innerBorder: "#64b5f6",
   innerHover: "#42a5f5",
-  revealedFill: "#e3f2fd",
+  revealedFill: "#bbdefbaa",
 };
 
 const purpleColors: GridColors = {
@@ -15,7 +15,7 @@ const purpleColors: GridColors = {
   innerFill: "#e1bee7",
   innerBorder: "#ab47bc",
   innerHover: "#9c27b0",
-  revealedFill: "#f3e5f5",
+  revealedFill: "#e1bee7aa",
 };
 
 const orangeColors: GridColors = {
@@ -24,7 +24,7 @@ const orangeColors: GridColors = {
   innerFill: "#ffe0b2",
   innerBorder: "#fb8c00",
   innerHover: "#f57c00",
-  revealedFill: "#fff3e0",
+  revealedFill: "#ffe0b2aa",
 };
 
 const tealColors: GridColors = {
@@ -33,7 +33,7 @@ const tealColors: GridColors = {
   innerFill: "#b2dfdb",
   innerBorder: "#26a69a",
   innerHover: "#00897b",
-  revealedFill: "#e0f2f1",
+  revealedFill: "#b2dfdbaa",
 };
 
 export interface LevelConfig {

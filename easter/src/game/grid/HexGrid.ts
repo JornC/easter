@@ -23,51 +23,6 @@ export interface GridConfig {
   colors: GridColors;
 }
 
-export const colorSchemes = {
-  blue: {
-    outerRingFill: "#3392e0",
-    outerRingBorder: "#ffffff",
-    innerFill: "#84bff0",
-    innerBorder: "#3392e0",
-    innerHover: "#cc6666",
-    revealedFill: "#ffffff33",
-  },
-  green: {
-    outerRingFill: "#4CAF50",
-    outerRingBorder: "#ffffff",
-    innerFill: "#81C784",
-    innerBorder: "#4CAF50",
-    innerHover: "#cc6666",
-    revealedFill: "#ffffff33",
-  },
-  purple: {
-    outerRingFill: "#9C27B0",
-    outerRingBorder: "#ffffff",
-    innerFill: "#CE93D8",
-    innerBorder: "#9C27B0",
-    innerHover: "#cc6666",
-    revealedFill: "#ffffff33",
-  },
-  orange: {
-    outerRingFill: "#FF9800",
-    outerRingBorder: "#ffffff",
-    innerFill: "#FFB74D",
-    innerBorder: "#FF9800",
-    innerHover: "#cc6666",
-    revealedFill: "#ffffff33",
-  },
-  teal: {
-    outerRingFill: "#009688",
-    outerRingBorder: "#ffffff",
-    innerFill: "#4DB6AC",
-    innerBorder: "#009688",
-    innerHover: "#cc6666",
-    revealedFill: "#ffffff33",
-  },
-} as const;
-
-export const defaultColors = colorSchemes.blue;
-
 export class HexGrid {
   private map: Map;
   private layer: any;
@@ -82,12 +37,7 @@ export class HexGrid {
 
   constructor(
     map: Map,
-    config: GridConfig = {
-      center: [185000, 460000],
-      rings: 5,
-      hexSize: 100,
-      colors: defaultColors,
-    },
+    config: GridConfig,
     gameLogic: GameLogic,
     onGameOver: Function
   ) {
