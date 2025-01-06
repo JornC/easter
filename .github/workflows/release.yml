@@ -36,22 +36,13 @@ jobs:
             echo "Error: Version ${VERSION} already exists in Nexus. Aborting."
             exit 1
           fi
-      
-      - name: Test Upload without Sending
+
+      - name: Upload built files to Nexus
         run: |
           VERSION=${{ env.PACKAGE_VERSION }}
           for file in $(find easter/dist -type f); do
             REL_PATH=${file#easter/dist/} # Remove leading directory
-            echo "Would upload: $file -> https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/${REL_PATH}"
+            curl -u "${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASSWORD }}" \
+              --upload-file "$file" \
+              "https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/${REL_PATH}"
           done
-
-
-      #- name: Upload built files to Nexus
-      #  run: |
-      #    VERSION=${{ env.PACKAGE_VERSION }}
-      #    for file in $(find easter/dist -type f); do
-      #      REL_PATH=${file#easter/dist/} # Remove leading directory
-      #      curl -u "${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_PASSWORD }}" \
-      #        --upload-file "$file" \
-      #        "https://nexus.aerius.nl/repository/js-releases/easter/${VERSION}/${REL_PATH}"
-      #    done
