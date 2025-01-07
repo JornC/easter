@@ -121,20 +121,20 @@ export class HexGrid {
   }
 
   private createGrid() {
+    // For a regular hexagon with area A:
+    // A = (3√3/2) * a², where a is the side length
+    // Therefore: a = √(2A/3√3)
+    const targetArea = Math.pow(this.config.hexSize, 2); // e.g. 100² = 10000 m²
+    const sideLength = Math.sqrt((2 * targetArea) / (3 * Math.sqrt(3))); // This gives us 62.04 for 10000m²
+    const hexWidth = sideLength; // honeycomb-grid's dimensions is the side length
+
     const Hex = defineHex({
-      dimensions: this.config.hexSize,
+      dimensions: hexWidth,
       orientation: Orientation.FLAT,
     });
 
     const grid = new Grid(Hex, spiral({ radius: this.config.rings }));
-
-    // Calculate offset to center the grid on the target location
     const [centerX, centerY] = this.config.center;
-    const gridWidthMeters = this.config.rings * this.config.hexSize * 1.5;
-    const gridHeightMeters =
-      this.config.rings * this.config.hexSize * Math.sqrt(3);
-    const offsetX = centerX - gridWidthMeters / 2;
-    const offsetY = centerY - gridHeightMeters / 2;
 
     grid.forEach((hex) => {
       const isOuterRing =
@@ -145,10 +145,10 @@ export class HexGrid {
         geometry: new Polygon([
           [
             ...hex.corners.map((corner) => [
-              offsetX + corner.x,
-              offsetY + corner.y,
+              centerX + corner.x,
+              centerY + corner.y,
             ]),
-            [offsetX + hex.corners[0].x, offsetY + hex.corners[0].y],
+            [centerX + hex.corners[0].x, centerY + hex.corners[0].y],
           ],
         ]),
         isOuterRing: isOuterRing,
