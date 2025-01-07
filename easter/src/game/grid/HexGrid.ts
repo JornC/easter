@@ -191,7 +191,7 @@ export class HexGrid {
         text:
           isRevealed || (gameState === "defeat" && isMine && !isFlagged)
             ? new this.OL.Style.text({
-                text: isMine ? "💣" : number > 0 ? number.toString() : "",
+                text: isMine ? "B" : number > 0 ? number.toString() : "",
                 font: "bold 24px Arial",
                 fill: new this.OL.Style.fill({
                   color: isMine ? "#ffffff" : "#000000",
@@ -205,7 +205,7 @@ export class HexGrid {
               })
             : isFlagged
             ? new this.OL.Style.text({
-                text: "❌",
+                text: "X",
                 font: "bold 24px Arial",
                 fill: new this.OL.Style.fill({ color: "#ff0000" }),
                 stroke: new this.OL.Style.stroke({

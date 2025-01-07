@@ -68,7 +68,7 @@ export class GamePanel {
     `;
 
     const exitButton = document.createElement("button");
-    exitButton.textContent = "🚪 Exit Game";
+    exitButton.textContent = "Exit Game";
     exitButton.onclick = () => this.onExit();
     exitButton.style.cssText = this.getButtonStyle("#666");
     exitButton.style.width = "100%";
@@ -90,8 +90,8 @@ export class GamePanel {
       const isUnlocked = level <= this.maxUnlockedLevel;
 
       button.textContent = isUnlocked
-        ? `🎯 Level ${level}`
-        : `🔒 Level ${level}`;
+        ? `Level ${level}`
+        : `[Locked] Level ${level}`;
 
       if (isUnlocked) {
         button.onclick = () => this.onSelectLevel(level);
@@ -156,7 +156,7 @@ export class GamePanel {
     const status = this.container.querySelector<HTMLDivElement>("#game-status");
     if (status) {
       if (isVictory) {
-        status.textContent = "🎉 VICTORY!";
+        status.textContent = "VICTORY!";
         status.style.cssText = `
           margin: 0.5rem 0;
           text-align: center;
@@ -168,7 +168,7 @@ export class GamePanel {
           animation: pulse 1s infinite;
         `;
       } else {
-        status.textContent = "💥 Game Over!";
+        status.textContent = "Game Over!";
         status.style.color = "#f44336";
       }
     }
