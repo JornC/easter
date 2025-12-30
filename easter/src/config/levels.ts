@@ -1,4 +1,29 @@
 import { GridColors } from "../game/grid/HexGrid";
+import { GameOfLifeColors } from "../game/grid/GameOfLifeGrid";
+
+export interface GameOfLifeConfig {
+  hexSize: number;
+  colors: GameOfLifeColors;
+}
+
+export const GAME_OF_LIFE_CONFIG: Record<"NL" | "UK", GameOfLifeConfig> = {
+  NL: {
+    hexSize: 100,
+    colors: {
+      alive: "#4CAF50",
+      dead: "#e8f5e9",
+      border: "#81c784",
+    },
+  },
+  UK: {
+    hexSize: 400,
+    colors: {
+      alive: "#4CAF50",
+      dead: "#e8f5e9",
+      border: "#81c784",
+    },
+  },
+};
 
 const blueColors: GridColors = {
   outerRingFill: "#64b5f6",
