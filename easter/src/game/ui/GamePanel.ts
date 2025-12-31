@@ -1,3 +1,7 @@
+import { PatternName } from "../grid/GameOfLifeGrid";
+
+export type GameType = "life" | "minesweeper";
+
 export class GamePanel {
   private container: HTMLDivElement;
   private onExit: Function;
@@ -6,17 +10,35 @@ export class GamePanel {
   private numLevels: number;
   private maxUnlockedLevel: number;
   private onSelectLevel: (level: number) => void;
+  private onSelectGame: (game: GameType) => void;
+  private onClear: () => void;
+  private onTogglePlay: () => void;
+  private onSelectPattern: (pattern: PatternName) => void;
+  private currentGame: GameType;
+  private isPlaying: boolean = false;
+  private playButton: HTMLButtonElement | null = null;
+  private currentPattern: PatternName = "glider";
 
   constructor(
     onExit: Function,
     onSelectLevel: (level: number) => void,
     numLevels: number,
-    maxUnlockedLevel: number
+    maxUnlockedLevel: number,
+    onSelectGame: (game: GameType) => void,
+    onClear: () => void,
+    onTogglePlay: () => void,
+    onSelectPattern: (pattern: PatternName) => void,
+    currentGame: GameType = "life",
   ) {
     this.onExit = onExit;
     this.numLevels = numLevels;
     this.maxUnlockedLevel = maxUnlockedLevel;
     this.onSelectLevel = onSelectLevel;
+    this.onSelectGame = onSelectGame;
+    this.onClear = onClear;
+    this.onTogglePlay = onTogglePlay;
+    this.onSelectPattern = onSelectPattern;
+    this.currentGame = currentGame;
 
     // Add keyframe animation for victory pulse
     const style = document.createElement("style");
@@ -32,8 +54,7 @@ export class GamePanel {
     this.container = this.createPanel();
     document.body.appendChild(this.container);
 
-    // Create level buttons
-    this.createLevelButtons();
+    this.updateGameControls();
   }
 
   private createPanel(): HTMLDivElement {
@@ -56,6 +77,9 @@ export class GamePanel {
       z-index: 1;
     `;
 
+    // Game selector
+    const gameSelector = this.createGameSelector();
+
     const status = document.createElement("div");
     status.id = "game-status";
 
@@ -73,6 +97,7 @@ export class GamePanel {
     exitButton.style.cssText = this.getButtonStyle("#666");
     exitButton.style.width = "100%";
 
+    panel.appendChild(gameSelector);
     panel.appendChild(status);
     panel.appendChild(this.buttonContainer);
     panel.appendChild(exitButton);
@@ -80,10 +105,184 @@ export class GamePanel {
     return panel;
   }
 
-  private createLevelButtons() {
-    // Clear existing buttons
-    this.buttonContainer.innerHTML = "";
+  private createGameSelector(): HTMLDivElement {
+    const container = document.createElement("div");
+    container.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid #ddd;
+    `;
 
+    const label = document.createElement("label");
+    label.textContent = "Game:";
+    label.style.cssText = `
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #333;
+    `;
+
+    const select = document.createElement("select");
+    select.id = "game-selector";
+    select.style.cssText = `
+      padding: 0.6rem;
+      border: 1px solid #3392e0;
+      border-radius: 0.3rem;
+      background: white;
+      color: #333;
+      font-size: 0.9rem;
+      cursor: pointer;
+    `;
+
+    const lifeOption = document.createElement("option");
+    lifeOption.value = "life";
+    lifeOption.textContent = "Game of Life";
+    lifeOption.selected = this.currentGame === "life";
+
+    const minesweeperOption = document.createElement("option");
+    minesweeperOption.value = "minesweeper";
+    minesweeperOption.textContent = "Minesweeper";
+    minesweeperOption.selected = this.currentGame === "minesweeper";
+
+    select.appendChild(lifeOption);
+    select.appendChild(minesweeperOption);
+
+    select.onchange = (e) => {
+      const selectedGame = (e.target as HTMLSelectElement).value as GameType;
+      this.currentGame = selectedGame;
+      this.updateGameControls();
+      this.onSelectGame(selectedGame);
+    };
+
+    container.appendChild(label);
+    container.appendChild(select);
+
+    return container;
+  }
+
+  private updateGameControls(): void {
+    this.buttonContainer.innerHTML = "";
+    this.clearGameOver();
+
+    if (this.currentGame === "life") {
+      this.createLifeControls();
+    } else {
+      this.createLevelButtons();
+    }
+  }
+
+  private createLifeControls(): void {
+    // Instructions
+    const instructions = document.createElement("div");
+    instructions.style.cssText = `
+      font-size: 0.8rem;
+      color: #666;
+      line-height: 1.4;
+      padding: 0.5rem;
+      background: #f5f5f5;
+      border-radius: 0.3rem;
+      margin-bottom: 0.5rem;
+    `;
+    instructions.innerHTML = `
+      <strong>Rules (3,5/2):</strong><br>
+      Birth: 2 neighbors<br>
+      Survive: 3 or 5 neighbors<br>
+      <br>
+      <strong>Controls:</strong><br>
+      Click to toggle cells<br>
+      Ctrl+drag to draw<br>
+      Shift+click for pattern
+    `;
+
+    // Pattern selector
+    const patternContainer = document.createElement("div");
+    patternContainer.style.cssText = `
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin-bottom: 0.5rem;
+    `;
+
+    const patternLabel = document.createElement("label");
+    patternLabel.textContent = "Pattern:";
+    patternLabel.style.cssText = `
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #333;
+    `;
+
+    const patternSelect = document.createElement("select");
+    patternSelect.style.cssText = `
+      padding: 0.5rem;
+      border: 1px solid #81c784;
+      border-radius: 0.3rem;
+      background: white;
+      color: #333;
+      font-size: 0.85rem;
+      cursor: pointer;
+    `;
+
+    const patterns: { value: PatternName; label: string }[] = [
+      { value: "glider", label: "Glider" },
+      { value: "diagonal", label: "Diagonal stripe" },
+      { value: "hexagon", label: "Hexagon ring" },
+      { value: "triangle", label: "Triangle" },
+      { value: "line", label: "Line" },
+      { value: "spark", label: "Spark" },
+    ];
+
+    patterns.forEach(({ value, label }) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      option.selected = value === this.currentPattern;
+      patternSelect.appendChild(option);
+    });
+
+    patternSelect.onchange = (e) => {
+      const selected = (e.target as HTMLSelectElement).value as PatternName;
+      this.currentPattern = selected;
+      this.onSelectPattern(selected);
+    };
+
+    patternContainer.appendChild(patternLabel);
+    patternContainer.appendChild(patternSelect);
+
+    // Play/Pause button
+    this.playButton = document.createElement("button");
+    this.updatePlayButton();
+    this.playButton.onclick = () => {
+      this.onTogglePlay();
+    };
+
+    // Clear button
+    const clearButton = document.createElement("button");
+    clearButton.textContent = "Clear";
+    clearButton.onclick = () => this.onClear();
+    clearButton.style.cssText = this.getButtonStyle("#f44336");
+
+    this.buttonContainer.appendChild(instructions);
+    this.buttonContainer.appendChild(patternContainer);
+    this.buttonContainer.appendChild(this.playButton);
+    this.buttonContainer.appendChild(clearButton);
+  }
+
+  private updatePlayButton(): void {
+    if (!this.playButton) return;
+    this.playButton.textContent = this.isPlaying ? "Pause" : "Play";
+    this.playButton.style.cssText = this.getButtonStyle(
+      this.isPlaying ? "#ff9800" : "#4CAF50",
+    );
+  }
+
+  setPlaying(playing: boolean): void {
+    this.isPlaying = playing;
+    this.updatePlayButton();
+  }
+
+  private createLevelButtons() {
     // Create buttons for each available level
     for (let level = 1; level <= this.numLevels; level++) {
       const button = document.createElement("button");
@@ -102,7 +301,7 @@ export class GamePanel {
           ? level === this.currentLevel
             ? "#3392e0"
             : "#84bff0"
-          : "#cccccc"
+          : "#cccccc",
       );
 
       button.dataset.level = level.toString();
@@ -123,13 +322,6 @@ export class GamePanel {
       transition: all 0.2s;
       font-weight: bold;
       text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2);
-      &:hover {
-        transform: scale(1.02);
-        opacity: 0.9;
-      }
-      &:active {
-        transform: scale(0.98);
-      }
     `;
   }
 
@@ -142,14 +334,21 @@ export class GamePanel {
       const buttonLevel = parseInt(button.dataset.level || "1");
       const isUnlocked = button.dataset.unlocked === "true";
       button.style.cssText = this.getButtonStyle(
-        isUnlocked ? (buttonLevel === level ? "#3392e0" : "#84bff0") : "#cccccc"
+        isUnlocked
+          ? buttonLevel === level
+            ? "#3392e0"
+            : "#84bff0"
+          : "#cccccc",
       );
     });
   }
 
   unlockNextLevel() {
     this.maxUnlockedLevel++;
-    this.createLevelButtons();
+    if (this.currentGame === "minesweeper") {
+      this.buttonContainer.innerHTML = "";
+      this.createLevelButtons();
+    }
   }
 
   setGameOver(isVictory: boolean) {
@@ -180,6 +379,16 @@ export class GamePanel {
       status.textContent = "";
       status.style.cssText = "";
     }
+  }
+
+  setCurrentGame(game: GameType) {
+    this.currentGame = game;
+    const selector =
+      this.container.querySelector<HTMLSelectElement>("#game-selector");
+    if (selector) {
+      selector.value = game;
+    }
+    this.updateGameControls();
   }
 
   dispose() {
