@@ -42,7 +42,7 @@ export class GameOfLifeLogic {
 
   private countAliveNeighbors(coord: Coordinate): number {
     return this.getNeighbors(coord).filter((n) =>
-      this.aliveCells.has(coordToString(n))
+      this.aliveCells.has(coordToString(n)),
     ).length;
   }
 
@@ -158,11 +158,15 @@ export class GameOfLifeLogic {
   private addCellsInRadius(
     center: Coordinate,
     radius: number,
-    cells: Set<string>
+    cells: Set<string>,
   ): void {
     // Add all cells within 'radius' rings of center
     for (let q = -radius; q <= radius; q++) {
-      for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+      for (
+        let r = Math.max(-radius, -q - radius);
+        r <= Math.min(radius, -q + radius);
+        r++
+      ) {
         const coord = { q: center.q + q, r: center.r + r };
         cells.add(coordToString(coord));
       }

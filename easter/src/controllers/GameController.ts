@@ -1,7 +1,11 @@
 import type { Map } from "ol";
 import { HexGrid, GridConfig } from "../game/grid/HexGrid";
 import { GameLogic } from "../game/state/GameState";
-import { LOCALITIES, LocalityConfig, GAME_OF_LIFE_CONFIG } from "../config/levels";
+import {
+  LOCALITIES,
+  LocalityConfig,
+  GAME_OF_LIFE_CONFIG,
+} from "../config/levels";
 import { GamePanel, GameType } from "../game/ui/GamePanel";
 import { ProgressManager } from "../game/state/Progress";
 import { GameOfLifeLogic } from "../game/state/GameOfLifeState";
@@ -49,7 +53,7 @@ export class GameController {
       () => this.clearLife(),
       () => this.toggleLife(),
       (pattern: PatternName) => this.selectPattern(pattern),
-      this.currentGameType
+      this.currentGameType,
     );
 
     // Start with Game of Life by default
@@ -98,7 +102,7 @@ export class GameController {
     };
 
     this.grid = new HexGrid(this.map, gridConfig, this.gameLogic, () =>
-      this.handleGameOver()
+      this.handleGameOver(),
     );
   }
 
@@ -183,7 +187,7 @@ export class GameController {
     this.gameLogic = new GameLogic(
       level.rings,
       level.minePercentage,
-      levelIndex + 1
+      levelIndex + 1,
     );
 
     const gridConfig: GridConfig = {
@@ -195,7 +199,7 @@ export class GameController {
 
     // Create new grid with new game logic
     this.grid = new HexGrid(this.map, gridConfig, this.gameLogic, () =>
-      this.handleGameOver()
+      this.handleGameOver(),
     );
 
     // Update UI

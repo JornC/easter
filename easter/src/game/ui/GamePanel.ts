@@ -28,7 +28,7 @@ export class GamePanel {
     onClear: () => void,
     onTogglePlay: () => void,
     onSelectPattern: (pattern: PatternName) => void,
-    currentGame: GameType = "life"
+    currentGame: GameType = "life",
   ) {
     this.onExit = onExit;
     this.numLevels = numLevels;
@@ -273,7 +273,7 @@ export class GamePanel {
     if (!this.playButton) return;
     this.playButton.textContent = this.isPlaying ? "Pause" : "Play";
     this.playButton.style.cssText = this.getButtonStyle(
-      this.isPlaying ? "#ff9800" : "#4CAF50"
+      this.isPlaying ? "#ff9800" : "#4CAF50",
     );
   }
 
@@ -301,7 +301,7 @@ export class GamePanel {
           ? level === this.currentLevel
             ? "#3392e0"
             : "#84bff0"
-          : "#cccccc"
+          : "#cccccc",
       );
 
       button.dataset.level = level.toString();
@@ -334,7 +334,11 @@ export class GamePanel {
       const buttonLevel = parseInt(button.dataset.level || "1");
       const isUnlocked = button.dataset.unlocked === "true";
       button.style.cssText = this.getButtonStyle(
-        isUnlocked ? (buttonLevel === level ? "#3392e0" : "#84bff0") : "#cccccc"
+        isUnlocked
+          ? buttonLevel === level
+            ? "#3392e0"
+            : "#84bff0"
+          : "#cccccc",
       );
     });
   }

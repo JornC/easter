@@ -8,7 +8,13 @@ import {
   stringToCoord,
 } from "../state/GameOfLifeState";
 
-export type PatternName = "glider" | "diagonal" | "hexagon" | "triangle" | "line" | "spark";
+export type PatternName =
+  | "glider"
+  | "diagonal"
+  | "hexagon"
+  | "triangle"
+  | "line"
+  | "spark";
 
 export const PATTERNS: Record<PatternName, Coordinate[]> = {
   glider: [
@@ -25,32 +31,57 @@ export const PATTERNS: Record<PatternName, Coordinate[]> = {
   ],
   diagonal: [
     // Diagonal stripe (10 cells)
-    { q: -2, r: 2 }, { q: -1, r: 1 }, { q: 0, r: 0 }, { q: 1, r: -1 }, { q: 2, r: -2 },
-    { q: -1, r: 2 }, { q: 0, r: 1 }, { q: 1, r: 0 }, { q: 2, r: -1 }, { q: 3, r: -2 },
+    { q: -2, r: 2 },
+    { q: -1, r: 1 },
+    { q: 0, r: 0 },
+    { q: 1, r: -1 },
+    { q: 2, r: -2 },
+    { q: -1, r: 2 },
+    { q: 0, r: 1 },
+    { q: 1, r: 0 },
+    { q: 2, r: -1 },
+    { q: 3, r: -2 },
   ],
   hexagon: [
     // Hexagon ring (6 cells)
-    { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 },
-    { q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 },
+    { q: 1, r: 0 },
+    { q: 0, r: 1 },
+    { q: -1, r: 1 },
+    { q: -1, r: 0 },
+    { q: 0, r: -1 },
+    { q: 1, r: -1 },
   ],
   triangle: [
     // Filled triangle (10 cells)
     { q: 0, r: 0 },
-    { q: -1, r: 1 }, { q: 0, r: 1 },
-    { q: -2, r: 2 }, { q: -1, r: 2 }, { q: 0, r: 2 },
-    { q: -3, r: 3 }, { q: -2, r: 3 }, { q: -1, r: 3 }, { q: 0, r: 3 },
+    { q: -1, r: 1 },
+    { q: 0, r: 1 },
+    { q: -2, r: 2 },
+    { q: -1, r: 2 },
+    { q: 0, r: 2 },
+    { q: -3, r: 3 },
+    { q: -2, r: 3 },
+    { q: -1, r: 3 },
+    { q: 0, r: 3 },
   ],
   line: [
     // Straight line (6 cells)
-    { q: -2, r: 0 }, { q: -1, r: 0 }, { q: 0, r: 0 },
-    { q: 1, r: 0 }, { q: 2, r: 0 }, { q: 3, r: 0 },
+    { q: -2, r: 0 },
+    { q: -1, r: 0 },
+    { q: 0, r: 0 },
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+    { q: 3, r: 0 },
   ],
   spark: [
     // Sparse pattern - each cell has ~2-3 neighbors
     { q: 0, r: 0 },
-    { q: 2, r: 0 }, { q: -2, r: 0 },
-    { q: 1, r: 1 }, { q: -1, r: -1 },
-    { q: 1, r: -1 }, { q: -1, r: 1 },
+    { q: 2, r: 0 },
+    { q: -2, r: 0 },
+    { q: 1, r: 1 },
+    { q: -1, r: -1 },
+    { q: 1, r: -1 },
+    { q: -1, r: 1 },
   ],
 };
 
@@ -84,7 +115,11 @@ export class GameOfLifeGrid {
   private drawMode: boolean = true; // true = draw alive, false = erase
   private selectedPattern: PatternName = "glider";
 
-  constructor(map: OLMap, config: GameOfLifeGridConfig, gameLogic: GameOfLifeLogic) {
+  constructor(
+    map: OLMap,
+    config: GameOfLifeGridConfig,
+    gameLogic: GameOfLifeLogic,
+  ) {
     this.map = map;
     this.config = config;
     this.gameLogic = gameLogic;
